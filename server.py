@@ -5,17 +5,25 @@ import threading
 import sender
 import os
 import time
+
+running = True
+
 def run_server(filename):
+	running = True
 	server_port, window_size, seed, plp = read_params('input/' + filename)
 	
 	main_socket = socket(AF_INET, SOCK_DGRAM)
 	main_socket.setsockopt(SOL_SOCKET, SO_REUSEADDR, 1) #enable socket reuse
 	main_socket.bind(('', server_port))
-
+	main_socket.settimeout(0.5)
 	print('server up')
 	bef_to_add = 0
-	while(1):
-		msg,to_add = main_socket.recvfrom(consts.pkt_size)
+	while(running):
+		try:
+			msg,to_add = main_socket.recvfrom(consts.pkt_size)
+		except Exception as e:
+			continue
+
 		if(to_add == bef_to_add):
 			continue
 		bef_to_add = to_add
@@ -58,13 +66,4 @@ def read_params(filename):
 
 
 
-def read_params(filename):
-	file = open(filename)
-	server_port = int(file.readline())
-	window_size = int(file.readline())
-	seed = int(file.readline())
-	plp = float(file.readline())
-	return (server_port, window_size, seed, plp)
-
-
-run_server('server_0.00.in')
+# run_server('server_0.00.in')

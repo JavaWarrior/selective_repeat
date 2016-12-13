@@ -85,8 +85,8 @@ def client_main(filename):
 			while( found_data != 0):
 				fsize = fsize - len(found_data)
 				file.write(found_data)
-				util.print_download_bar(cur_seqnum, const_fsize/consts.pkt_size, 
-					suffix = util.util_round(time.time() - tic, 1000))
+				# util.print_download_bar(cur_seqnum, const_fsize/consts.pkt_size, 
+				# 	suffix = util.util_round(time.time() - tic, 1000))
 				cur_seqnum = cur_seqnum + 1
 				found_data = 0
 				try:
@@ -118,4 +118,6 @@ def send_ack(sock, seqnum, to_add):
 	threading.Thread(target = send_ack_core, args = (sock, seqnum, to_add)).start()
 def send_ack_core(sock, seqnum, to_add):
 	sock.sendto(util.makepkt(b'', seqnum), to_add)
-client_main('client1.in')
+
+	
+# client_main('client1.in')

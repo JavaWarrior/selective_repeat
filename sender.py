@@ -64,7 +64,7 @@ class sender:
 					while(self.acked(self.send_base)):
 						self.send_base = self.send_base + 1
 
-
+	# def sender_kernel
 	def fire_sender(self, msg, seqnum):
 		self.packets[seqnum] = {'time': -1, 'data':msg, 'acked':False} #add data to send queue
 		t = threading.Timer(self.timeout_val, self.sender_kernel, (msg,seqnum))
