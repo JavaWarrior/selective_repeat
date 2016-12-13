@@ -3,6 +3,7 @@ import util
 import random
 import consts
 import time
+import sys
 class sender:
 	start_timeout_val = 0.5
 
@@ -14,6 +15,8 @@ class sender:
 	send_base = 0
 	next_seqnum = 0
 
+	cc_state = 0
+	cc_ca_counter = 0
 	packets = {}
 	def __init__(self, connection, to_add, seed, plp, windowsize):
 		self.connection = connection
@@ -46,7 +49,7 @@ class sender:
 
 	def receiver_kernel(self):
 		while 1:
-			print(self.send_base, self.next_seqnum)
+			# print(self.send_base, self.next_seqnum)
 			recvd, self.to_add = self.connection.recvfrom(consts.header_size + consts.pkt_size)
 			if(not util.checkvalid(recvd)):
 				continue
@@ -57,6 +60,7 @@ class sender:
 					self.packets[seqnum]['acked'] = True
 					self.packets[seqnum]['thread'].cancel()
 					self.update_timeout(time.time() - self.packets[seqnum]['time'])
+					self.cc_recvd_ack()
 					while(self.acked(self.send_base)):
 						self.send_base = self.send_base + 1
 
@@ -73,8 +77,10 @@ class sender:
 			t = threading.Timer(self.timeout_val, self.sender_kernel, (msg,seqnum))
 			self.packets[seqnum]['time'] = time.time()
 			self.packets[seqnum]['thread'] = t
+			#call for congestion control timeout
+			if(self.packets[seqnum]['time'] != -1):
+				self.cc_timeout()
 			self.sendpkt(util.makepkt(msg, seqnum))
-			#dummy call for congestion control timeout
 			t.start()
 
 	def sendpkt(self, msg):
@@ -89,7 +95,7 @@ class sender:
 		# return 0.01	#used when we want to define constant rtt
 		self.rtt_exp = 0.875 * self.rtt_exp + 0.125 * new_rtt
 		self.rtt_var = 0.75 * self.rtt_var + 0.25 * abs(self.rtt_exp - new_rtt)
-		print('\n', new_rtt, self.rtt_exp, self.rtt_var)
+		# print('\n', new_rtt, self.rtt_exp, self.rtt_var)
 		# debug = open('rtt_debug.csv', 'w')
 		# debug.write(str(new_rtt) + ', ' + str(self.rtt_exp) + ', ' + str(self.rtt_var))
 		# return max(self.rtt_exp + 4 * self.rtt_var, 0.003)
@@ -98,3 +104,35 @@ class sender:
 	def genseqnum(self):
 		self.next_seqnum = self.next_seqnum + 1
 		return self.next_seqnum - 1
+
+	def cc_recvd_ack(self):
+		if(self.cc_state == 0):
+			#slow start
+			self.windowsize = self.windowsize + 1			
+			if(self.windowsize > self.ssthresh):
+				self.cc_state = 1 #congestion avoidance
+		elif(self.cc_state == 1):
+			self.cc_ca_counter = self.cc_ca_counter + 1
+			if(self.cc_ca_counter >= self.windowsize):
+				self.cc_ca_counter = 0
+				self.windowsize = self.windowsize + 1
+		self.print_cc()
+	def cc_timeout(self):
+		if(self.cc_state == 0):
+			#slow start
+			self.ssthresh = self.windowsize / 2
+			self.windowsize = 1 #tcp tahoe
+			# self.windowsize = self.windowsize / 2 #tcp reno
+		else:
+			#congestion avoidance
+			self.ssthresh = self.windowsize / 2
+			self.windowsize = 1
+			self.cc_state = 0
+		self.print_cc()
+
+	def print_cc(self):
+		if(self.cc_state == 0):
+			print('slow start cwnd:',self.windowsize,'ssthresh:', self.ssthresh)
+			# print('slow start cwnd:', self.cc_ca_counter, )
+		else:
+			print('cong avoid cwnd:',self.windowsize,'ssthresh:', self.ssthresh)
