@@ -13,7 +13,7 @@ def client_main(filename):
 
 	while 1:
 		#send request server and wait for response
-		print('sending rquest to', to_add)
+		print('requesting', send_file)
 		client_sock.sendto(send_file.encode(), to_add)
 		try:
 			fsize, to_add = client_sock.recvfrom(consts.pkt_size)
@@ -45,9 +45,15 @@ def client_main(filename):
 	const_fsize = fsize
 
 	client_sock.settimeout(None)
+	# client_sock.settimeout(0.001)
 
 	while fsize:
+		# try:
 		data, to_add = client_sock.recvfrom(consts.pkt_size + consts.header_size)
+		# except Exception as e:
+			# continue
+		# if(not data):
+			# continue
 
 		if(not util.checkvalid(data)):
 			continue #invalid packet
@@ -71,7 +77,7 @@ def client_main(filename):
 			if(not found_data):
 				#if not already saved
 				packets[rec_seqnum] = util.getdata(data)
-			print(cur_seqnum, rec_seqnum)
+			# print(cur_seqnum, rec_seqnum)
 			send_ack(client_sock, rec_seqnum, to_add)
 			# client_sock.sendto(util.makepkt(b'', rec_seqnum), to_add) #send ack anyway
 			if(rec_seqnum != cur_seqnum):
@@ -85,16 +91,18 @@ def client_main(filename):
 			while( found_data != 0):
 				fsize = fsize - len(found_data)
 				file.write(found_data)
-				# util.print_download_bar(cur_seqnum, const_fsize/consts.pkt_size, 
-				# 	suffix = util.util_round(time.time() - tic, 1000))
+				util.print_download_bar(cur_seqnum, const_fsize/consts.pkt_size, 
+					suffix = util.util_round(time.time() - tic, 1000))
 				cur_seqnum = cur_seqnum + 1
 				found_data = 0
 				try:
 					found_data = packets[cur_seqnum]
 				except Exception as e:
-					pass
-	print('completed in:', time.time() - tic)
-	return const_fsize,time.time() - tic
+					break
+	total_time = time.time() - tic
+	print('\n',send_file,'completed in:', total_time)
+	print('avg throughput:', const_fsize/total_time, 'bytes/s')
+	return const_fsize,total_time
 
 
 
@@ -115,9 +123,10 @@ def delete_file_first(filename):
 	except OSError:
 		pass
 def send_ack(sock, seqnum, to_add):
-	threading.Thread(target = send_ack_core, args = (sock, seqnum, to_add)).start()
+	send_ack_core(sock, seqnum, to_add)
+	# threading.Thread(target = send_ack_core, args = (sock, seqnum, to_add)).start()
 def send_ack_core(sock, seqnum, to_add):
 	sock.sendto(util.makepkt(b'', seqnum), to_add)
 
-	
+
 # client_main('client1.in')

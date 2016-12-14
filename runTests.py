@@ -35,8 +35,8 @@ def run_test(serverfilename):
 
 
 
-run_test('server_0.in')
+run_test('server_0.00.in')
 run_test('server_0.05.in')
-run_test('server_0.1.in')
-run_test('server_0.3.in')
+run_test('server_0.10.in')
+run_test('server_0.30.in')
 

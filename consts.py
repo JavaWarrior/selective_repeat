@@ -1,3 +1,3 @@
-pkt_size = 500
+pkt_size = 2000
 header_size = 6
-ssthresh = 200
+ssthresh = 2000
